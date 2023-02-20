@@ -89,7 +89,7 @@ platcov_dat = platcov_dat %>% group_by(ID, Timepoint_ID) %>%
          Site = as.factor(Site),
          Trt = factor(Trt, levels=c(ref_arm, trts)),
          Vaccinated = as.factor(ifelse(N_dose>0,'Yes','No')),
-         Variant = as.factor(Variant)) %>%
+         Variant = factor(Variant,levels=c('Delta','BA.1','BA.2','BA.3','BA.4','BA.5'))) %>%
   ungroup() %>%
   mutate(trt_color = brewer.pal(name = 'Dark2',8)[c(1,7)][as.numeric(Trt)]) 
 
@@ -117,7 +117,19 @@ tab.ff <- Baseline_data %>% filter(mITT) %>%
   ) %>%
   kable_classic(full_width = FALSE)
 tab.ff
-save_kable(tab.ff,file = 'Favipiravir_analysis_baseline_characteristics.pdf')
+```
+
+```{r sars_cov_variants}
+par(las=1, family='serif', cex.lab=1.3, cex.axis=1.3)
+plot(Baseline_data$Rand_date, 1:nrow(Baseline_data),
+     xlab='Randomisation date', ylab = 'Patient number',
+     col = brewer.pal(name = 'Set2',n=8)[as.numeric(Baseline_data$Variant)],
+     panel.first=grid(), xaxt='n',
+     pch = ifelse(Baseline_data$Variant_Imputed==0,16,1))
+vals = as.POSIXct(seq.Date(from = as.Date('2021-10-01'), 
+                                 to = as.Date('2022-10-01'),length.out = 5))
+axis(1, at = vals, labels = lubridate::as_date(vals))
+
 ```
 
 ## Fit models
@@ -147,7 +159,7 @@ writeLines(sprintf('Analysis dataset contains %s patients and %s datapoints (%s 
                    round(100*mean(platcov_dat_analysis$CT_NS<40))))
 
 covs_base = c('Variant','Site')
-covs_full=c(covs_base, 'Age_scaled','Symptom_onset')
+covs_full=c(covs_base, 'Age_scaled','Symptom_onset','N_dose')
 stan_inputs = 
   make_stan_inputs(input_data_fit = platcov_dat_analysis,
                    int_covs_base = covs_base,
